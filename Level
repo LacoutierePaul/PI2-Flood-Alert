@@ -1,0 +1,101 @@
+import requests
+import json
+import pandas as pd
+import folium
+from folium.plugins import MarkerCluster
+url_measures = "http://environment.data.gov.uk/flood-monitoring/id/measures"
+
+url_stations = "http://environment.data.gov.uk/flood-monitoring/id/stations"
+
+params_measures = {
+    "parameter": "level",
+}
+
+params_stations = {
+    
+}
+
+try:
+    api_request = requests.get(url_measures, params=params_measures)
+    data_measures = json.loads(api_request.content)
+except Exception as e:
+    data_measures = "Error..."
+
+try:
+    api_request = requests.get(url_stations, params=params_stations)
+    data_stations = json.loads(api_request.content)
+except Exception as e:
+    data_stations = "Error..."
+
+df = pd.DataFrame(data_measures["items"])
+
+df.head(10)
+
+df_stations = pd.DataFrame(data_stations["items"])
+
+df_stations.head(10)
+
+df = df.drop(columns=['datumType', 'label', 'notation', 'parameterName', 'period', 'station', ])
+df_stations = df_stations[['lat', 'long', 'stationReference']]
+
+# ajout des colonnes 'dateTime' et 'value' à partir de la colonne 'latestReading'
+extr = df['latestReading'].apply(pd.Series)
+
+# on enlève les colonnes inutiles
+extr.drop(columns=['@id', 'date'], inplace=True)
+
+# on ajoute les colonnes 'dateTime' et 'value' à df
+df = pd.concat([df, extr], axis=1)
+
+# on supprime la colonne 'latestReading' et 0
+df.drop(columns=['latestReading', 0], inplace=True)
+df = pd.merge(df, df_stations, on='stationReference')
+
+df.dropna(subset=['measure'], inplace=True)
+
+# on supprime toutes les lignes avec une valeur manquante dans les colonnes 'lat' et 'long'
+df.dropna(subset=['lat', 'long'], inplace=True)
+
+# on supprime toutes les lignes avec des valeurs sous forme de liste dans les colonnes 'lat' et 'long'
+df = df[~df['lat'].apply(lambda x: isinstance(x, list))]
+
+df.sort_values(by=['dateTime'], ascending=False, inplace=True)
+
+df.head(10)
+
+# on crée une carte centrée sur le Royaume-Uni
+m = folium.Map(location=[54.5, -3.5], zoom_start=6)
+
+# on ajoute les points des 50 premières lignes
+for index, row in df.head(50).iterrows():
+    folium.Marker([row['lat'], row['long']], popup=row['value']).add_to(m)
+
+# on affiche la carte
+
+# on crée une carte centrée sur le Royaume-Uni
+m = folium.Map(location=[54.5, -3.5], zoom_start=6)
+
+# on ajoute les points
+marker_cluster = MarkerCluster().add_to(m)
+
+# sur les 50 dernières valeurs
+for index, row in df.head(50).iterrows():
+    folium.Marker([row['lat'], row['long']], popup=row['value']).add_to(marker_cluster)
+
+# on affiche la carte
+m
+
+# nouveau dataframe avec les données des 3 dernières heures
+df_3h = df[df['dateTime'] > '2023-10-30T06:00:00Z']
+
+# on crée une carte centrée sur le Royaume-Uni
+m = folium.Map(location=[54.5, -3.5], zoom_start=6)
+
+# on ajoute les points
+marker_cluster = MarkerCluster().add_to(m)
+
+for index, row in df_3h.iterrows():
+    folium.Marker([row['lat'], row['long']], popup=row['value']).add_to(marker_cluster)
+
+# on affiche la carte
+m
