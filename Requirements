@@ -1,0 +1,4 @@
+streamlit==1.17.1  # Remplacez la version par la version spécifique que vous souhaitez
+streamlit_folium==0.14.0  # Remplacez la version par la version spécifique que vous souhaitez
+folium==0.12.1  # Remplacez la version par la version spécifique que vous souhaitez
+scikit-learn==0.24.2  # Remplacez la version par la version spécifique que vous souhaitez
