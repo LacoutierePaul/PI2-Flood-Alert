@@ -1,1 +1,2 @@
-scikit-learn
+streamlit_folium==0.14 # Remplacez "0.14.0" par la version spécifique que vous souhaitez utiliser
+
