@@ -181,7 +181,5 @@ elif selected_tab=="Find a station":
     # Load Map button
     if st.button("Load Map"):
         maliste= create_map(latitude, longitude, our_radius)
-        st.write('test1')
         st.dataframe(df[df['stationReference'].isin(maliste)])
-        st.write('test')
 
