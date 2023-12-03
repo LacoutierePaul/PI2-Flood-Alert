@@ -49,11 +49,16 @@ def create_map(latitude, longitude, our_radius):
     df2 = df2[~df2['lat'].apply(lambda x: isinstance(x, list))]
 
     marker_cluster = MarkerCluster().add_to(m)
+    maliste=[]
 
     for index, row in df2.iterrows():
         folium.Marker([row['lat'], row['long']], popup=row['stationReference']).add_to(marker_cluster)
+        maliste.append(row['stationReference'])
 
     folium_static(m)
+    return maliste
+
+
 
 
 st.write(""" # Pi² Diot-Siaci""")
@@ -120,7 +125,7 @@ df['dateTime'] = df['dateTime'].dt.date
 df_filtered = df[df['dateTime'] == date]
 
 # on crée une carte centrée sur le Royaume-Uni
-m = folium.Map(location=[54.5, -3.5], zoom_start=6)
+m = folium.Map(location=[51.5, -0.12], zoom_start=6)
 # on ajoute les points
 marker_cluster = MarkerCluster().add_to(m)
 for index, row in df.iterrows():
@@ -161,19 +166,22 @@ elif selected_tab == "Select by station":
         st.write("Typical Range High:", typical_range_high)    
         st.write("Typical Range Low:", typical_range_low)
     except Exception as e :
-        st.write("error")
+        st.write("No typical range")
 
 elif selected_tab=="Find a station":
     st.title("Sélection d'une Zone sur la Carte")
 
     # Two input fields for latitude and longitude
-    latitude = st.number_input("Latitude:", value=54.5)
-    longitude = st.number_input("Longitude:", value=-3.5)
+    latitude = st.number_input("Latitude:", value=51.5)
+    longitude = st.number_input("Longitude:", value=-0.12)
 
     # Range slider for adjusting the radius of the circle
     our_radius = st.slider("Rayon du cercle (kilomètres):", min_value=1, max_value=100, value=50)
 
     # Load Map button
     if st.button("Load Map"):
-        create_map(latitude, longitude, our_radius)
+        maliste= create_map(latitude, longitude, our_radius)
+        st.write('test1')
+        st.dataframe(df[df['stationReference'].isin(maliste)])
+        st.write('test')
 
