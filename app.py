@@ -12,36 +12,6 @@ import folium
 from folium.plugins import MarkerCluster
 from streamlit_folium import folium_static
 
-def create_map(latitude, longitude, our_radius):
-    m = folium.Map(location=[latitude, longitude], zoom_start=6)
-
-    # add a marker for the selected point
-    folium.Marker([latitude, longitude], popup="Selected point").add_to(m)
-
-    # add a circle around the selected point
-    folium.Circle(
-        location=[latitude, longitude],
-        radius=our_radius * 1000,
-        color="blue",
-        fill=True,
-        fill_color="blue",
-        fill_opacity=0.2,
-        popup=f"Rayon du cercle: {our_radius} mètres"
-    ).add_to(m)
-
-    # request
-    df = req.rquest_zone(latitude, longitude, our_radius)
-
-    marker_cluster = MarkerCluster().add_to(m)
-    rows=[]
-
-    for index, row in df.iterrows():
-        folium.Marker([row['lat'], row['long']], popup=row['stationReference']).add_to(marker_cluster)
-        rows.append(row['stationReference'])
-
-    folium_static(m)
-    return rows
-
 def create_map_risks(latitude, longitude, our_radius):
     m = folium.Map(location=[latitude, longitude], zoom_start=6)
 
