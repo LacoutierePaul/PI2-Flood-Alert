@@ -2,7 +2,6 @@
 
 # imports
 import req
-import requests
 
 import pandas as pd
 
@@ -57,8 +56,6 @@ def warning(df, typical_range_high, map=False):
 st.write("""# Pi² Diot-Siaci""")
 date = st.date_input("Pick a date")
 st.write("You picked: ", date)
-
-url_stations = "http://environment.data.gov.uk/flood-monitoring/id/stations"
 
 # requests
 df_readings = req.request_all_readings(date)
