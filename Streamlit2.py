@@ -132,7 +132,7 @@ for index, row in df.iterrows():
     folium.Marker([row['lat'], row['long']], popup=row['stationReference']).add_to(marker_cluster)
 
 # ajout des onglets
-tabs = ["DataFrame", "Map", "Select by station","Find a station"]
+tabs = ["DataFrame", "Map", "Select by station","Find a station","Stations sans typical_range_high"]
 selected_tab = st.sidebar.radio("Navigation", tabs)
 
 if selected_tab == "DataFrame":
@@ -183,3 +183,26 @@ elif selected_tab=="Find a station":
         maliste= create_map(latitude, longitude, our_radius)
         st.dataframe(df[df['stationReference'].isin(maliste)])
 
+elif selected_tab == "Stations sans typical_range_high":
+    st.title("Stations sans typical_range_high")
+
+    stations_without_typical_range_high = []
+
+    for station in df['stationReference'].unique():
+        url = f"{url_stations}/{station}"
+        st.write(url)
+        response = requests.get(url)
+        data = response.json()
+
+        try:
+            typical_range_high = data["items"]["stageScale"]["typicalRangeHigh"]
+        except KeyError:
+            # Si la clé 'typicalRangeHigh' n'existe pas, la station n'a pas cette valeur
+            stations_without_typical_range_high.append(station)
+
+    st.write("Stations sans typical_range_high:")
+    if stations_without_typical_range_high:
+        for station in stations_without_typical_range_high:
+            st.write(station)
+    else:
+        st.write("Toutes les stations ont une valeur pour typical_range_high")
