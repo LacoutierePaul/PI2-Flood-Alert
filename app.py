@@ -65,7 +65,7 @@ df_stations = req.request_all_station()
 df = req.merge_dataframes(df_readings, df_stations)
 
 # add the tabbed layout
-tabs = ["Dataframe", "Map", "Select a station", "Find a station"]
+tabs = ["Dataframe", "Map","Current Warnings", "Select a station", "Find a station"]
 selected_tab = st.sidebar.radio("Navigation", tabs)
 
 if selected_tab == "Dataframe":
@@ -97,7 +97,7 @@ elif selected_tab == "Select a station":
 
     # ensure that the stationReference column is unique
     cities = df['stationReference'].unique()
-
+    
     # choice from the user
     choice = st.selectbox('Select a station', cities)
 
@@ -128,3 +128,6 @@ elif selected_tab=="Find a station":
     if st.button("Load map"):
         maliste= create_map_risks(latitude, longitude, our_radius)
         st.dataframe(df[df['stationReference'].isin(maliste)])
+
+elif selected_tab=="Current warnings":
+    st.title("All the current warning in England")
