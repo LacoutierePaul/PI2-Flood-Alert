@@ -11,6 +11,8 @@ import folium
 from folium.plugins import MarkerCluster
 from streamlit_folium import folium_static
 
+
+
 def create_map_risks(latitude, longitude, our_radius):
     m = folium.Map(location=[latitude, longitude], zoom_start=6)
 
@@ -129,5 +131,17 @@ elif selected_tab=="Find a station":
         maliste= create_map_risks(latitude, longitude, our_radius)
         st.dataframe(df[df['stationReference'].isin(maliste)])
 
-elif selected_tab=="Current warnings":
-    st.title("All the current warning in England")
+elif selected_tab=="Current Warnings":
+    st.title("All the current warnings in England: ")
+    
+    stations=df["stationReference"].unique()
+    
+    warnings=[]
+    for s in stations:
+        typicalRange=req.request_typical_range(s,risk=True)
+        row=df[df['stationReference']==s]
+
+        if typicalRange!=None:
+            if row['value'].max()>typicalRange:
+                st.write("Warning in the station: ",s)
+                warnings.append(s)
