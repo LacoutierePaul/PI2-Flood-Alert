@@ -11,41 +11,53 @@ import folium
 from folium.plugins import MarkerCluster
 from streamlit_folium import folium_static
 
+class SessionState:
+    def __init__(self, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
 
+@st.cache(allow_output_mutation=True)
+def get_state():
+    return SessionState(points=[])
 
-def create_map_risks(latitude, longitude, our_radius):
-    m = folium.Map(location=[latitude, longitude], zoom_start=6)
+state = get_state()
 
-    # add a marker for the selected point
-    folium.Marker([latitude, longitude], popup="Selected point").add_to(m)
-
-    # add a circle around the selected point
-    folium.Circle(
-        location=[latitude, longitude],
-        radius=our_radius * 1000,
-        color="blue",
-        fill=True,
-        fill_color="blue",
-        fill_opacity=0.2,
-        popup=f"Rayon du cercle: {our_radius} mètres"
-    ).add_to(m)
-
-    # request
-    df_zone = req.request_zone(latitude, longitude, our_radius)
-
-    # merge the two dataframes
-    df = req.merge_dataframes(df_readings, df_zone)
+def create_map_risks(points):
+    m = folium.Map(location=[points[0][0], points[0][1]], zoom_start=6)
 
     marker_cluster = MarkerCluster().add_to(m)
-    rows=[]
+    rows = []
 
-    for index, row in df.iterrows():
-        folium.Marker([row['lat'], row['long']], popup=warning(df, req.request_typical_range(row['stationReference'], risk=True), map=True)).add_to(marker_cluster)
-        rows.append(req.request_typical_range(row['stationReference']))
+    for point in points:
+        latitude, longitude, our_radius = point
+
+        # add a marker for the selected point
+        folium.Marker([latitude, longitude], popup="Selected point").add_to(marker_cluster)
+
+        # add a circle around the selected point 
+        folium.Circle( location=[latitude, longitude],radius=our_radius * 1000,  color="blue", fill=True,fill_color="blue",fill_opacity=0.2,  popup=f"Rayon du cercle: {our_radius} mètres", ).add_to(m)
+
+        # request
+        df_zone = req.request_zone(latitude, longitude, our_radius)
+
+        # merge the two dataframes
+        required_columns = ['lat', 'long', 'stationReference']
+        if all(column in df_zone.columns for column in required_columns):
+            # merge the two dataframes
+            df = req.merge_dataframes(df_readings, df_zone)
+
+            for index, row in df.iterrows():
+                folium.Marker(
+                    [row['lat'], row['long']],
+                    popup=warning(df, req.request_typical_range(row['stationReference'], risk=True), map=True)
+                ).add_to(marker_cluster)
+
+                rows.append(req.request_typical_range(row['stationReference']))
+        else:
+            st.warning("The required columns are not present in the DataFrame.")
 
     folium_static(m)
     return rows
-
 def warning(df, typical_range_high, map=False):
     if typical_range_high != None:
         if df['value'].max() > typical_range_high:
@@ -118,18 +130,34 @@ elif selected_tab == "Select a station":
 
 elif selected_tab=="Find a station":
     st.title("Select a zone on the map")
-
+    points=[]
     # two input fields for latitude and longitude
     latitude = st.number_input("Latitude:", value=51.5)
     longitude = st.number_input("Longitude:", value=-0.12)
 
     # range slider for adjusting the radius of the circle
-    our_radius = st.slider("Radius (kilometers):", min_value=1, max_value=100, value=50)
+    our_radius = st.slider("Radius (kilometers):", min_value=1, max_value=20, value=5)
+    if st.button("Add Point"):
+        state.points.append([latitude, longitude, our_radius])
 
-    # load Map button
+    
+    if(st.button("Clear Points")):
+        state.points = []
+
+    if state.points:
+        st.write("List of Points:", state.points)
+
+
+
+# Load Map button
     if st.button("Load map"):
-        maliste= create_map_risks(latitude, longitude, our_radius)
-        st.dataframe(df[df['stationReference'].isin(maliste)])
+        if state.points:
+            maliste = create_map_risks(state.points)
+            st.dataframe(pd.DataFrame({"stationReference": maliste}))
+            state.points = []
+
+        else:
+            st.warning("Please add at least one point before loading the map.")
 
 elif selected_tab=="Current Warnings":
     st.title("All the current warnings in England: ")
