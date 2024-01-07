@@ -145,11 +145,8 @@ def request_typical_range(station, risk=False):
         typical_range_low = data["items"]["typicalRangeLow"]
     except Exception as e:
         typical_range_low = None
-
-    if risk:
-        return typical_range_high
-    else:
-        return typical_range_high, typical_range_low
+       
+    return (typical_range_high,typical_range_low)
     
 # merge two dataframes
 def merge_dataframes(df_readings, df_stations):
@@ -162,3 +159,24 @@ def merge_dataframes(df_readings, df_stations):
     df.sort_values(by=['dateTime'], ascending=False, inplace=True)
 
     return df
+
+# This function allows us to store every typical range high and low in a json file
+def store_typical_range(df):
+    stations=df['stationReference'].unique()
+
+    typical_range_dict={}
+
+    print("Requesting the API")
+    cpt=1
+    for s in stations:
+        try:
+            print((cpt/len(stations))*100,"%")
+            typicalRH,typicalRL=request_typical_range(s,risk=True)
+            typical_range_dict[s]={"typical_range_high":typicalRH,"typical_range_low":typicalRL}
+        except Exception as e:
+            print(e)
+        cpt+=1
+    print("Loading the json file...")
+    with open('typical_range_high.json','w') as file:
+        json.dump(typical_range_dict, file, indent=4)
+        print("Completed !")

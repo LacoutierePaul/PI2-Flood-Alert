@@ -31,6 +31,10 @@ def create_map_risks(points):
     for point in points:
         latitude, longitude, our_radius = point
 
+
+def create_map_risks(latitude, longitude, our_radius):
+    m = folium.Map(location=[latitude, longitude], zoom_start=6)
+
         # add a marker for the selected point
         folium.Marker([latitude, longitude], popup="Selected point").add_to(marker_cluster)
 
@@ -77,6 +81,16 @@ df_stations = req.request_all_station()
 
 # merge the two dataframes
 df = req.merge_dataframes(df_readings, df_stations)
+
+# We retrieve our typical ranges stored in a json file for every station
+try:
+    file_path='typical_range_high.json'
+    typical_ranges=pd.read_json(file_path,orient='index')
+    typical_ranges.reset_index(inplace=True)
+    typical_ranges.rename(columns={'index': 'Station'}, inplace=True)
+except Exception as e:
+    print(e)
+
 
 # add the tabbed layout
 tabs = ["Dataframe", "Map","Current Warnings", "Select a station", "Find a station"]
@@ -166,10 +180,19 @@ elif selected_tab=="Current Warnings":
     
     warnings=[]
     for s in stations:
-        typicalRange=req.request_typical_range(s,risk=True)
-        row=df[df['stationReference']==s]
+        try:
+            typicalRangeHigh=typical_ranges.loc[typical_ranges['Station'] == s, "typical_range_high"].iloc[0]
+            row=df[df['stationReference']==s]
 
-        if typicalRange!=None:
-            if row['value'].max()>typicalRange:
-                st.write("Warning in the station: ",s)
-                warnings.append(s)
+            if typicalRangeHigh!=None:
+                if row['value'].max()>typicalRangeHigh:
+                    warnings.append(s)
+                    
+        except Exception as e:
+            print(e)
+        
+    
+    warnings_df=pd.DataFrame(warnings,columns=["Station Warning"])
+    st.dataframe(warnings_df)
+
+    
