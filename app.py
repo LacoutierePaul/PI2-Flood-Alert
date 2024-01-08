@@ -3,6 +3,8 @@
 # imports
 import req
 
+from math import radians, cos, sin, sqrt, atan2
+
 import pandas as pd
 
 import streamlit as st
@@ -22,24 +24,50 @@ def get_state():
 
 state = get_state()
 
+def distance_calculation(lat1, lon1, lat2, lon2):
+    # convert latitude and longitude from degrees to radians
+    lat1, lon1, lat2, lon2 = map(radians, [lat1, lon1, lat2, lon2])
+
+    # haversine formula to calculate distance between two points on a sphere
+    dlat = lat2 - lat1
+    dlon = lon2 - lon1
+    a = sin(dlat / 2)**2 + cos(lat1) * cos(lat2) * sin(dlon / 2)**2
+    c = 2 * atan2(sqrt(a), sqrt(1 - a))
+    radius_of_earth = 6371 # radius of Earth in kilometers
+
+    distance = radius_of_earth * c
+
+    return distance
+
+def warning(df, typical_range):
+    typical_range_high, typical_range_low = typical_range
+    
+    if typical_range_high != None:
+        if df['value'].max() > typical_range_high:
+            return("Warning!")
+        else:
+            return("No warning.")
+    else:
+        return("No data.")
+
 def create_map_risks(points):
     m = folium.Map(location=[points[0][0], points[0][1]], zoom_start=6)
+
+    # create a dataframe with the columns 'pointNumber', 'stationReference', 'distance_to_point', 'typical_range_high', 'value_max', 'warning'
+    summary_df = pd.DataFrame(columns=['pointNumber', 'stationReference', 'distance_to_point', 'typical_range_high', 'value_max', 'warning'])
 
     marker_cluster = MarkerCluster().add_to(m)
     rows = []
 
     for point in points:
+        count_points = 1
         latitude, longitude, our_radius = point
-
-
-def create_map_risks(latitude, longitude, our_radius):
-    m = folium.Map(location=[latitude, longitude], zoom_start=6)
 
         # add a marker for the selected point
         folium.Marker([latitude, longitude], popup="Selected point").add_to(marker_cluster)
 
         # add a circle around the selected point 
-        folium.Circle( location=[latitude, longitude],radius=our_radius * 1000,  color="blue", fill=True,fill_color="blue",fill_opacity=0.2,  popup=f"Rayon du cercle: {our_radius} mètres", ).add_to(m)
+        folium.Circle(location=[latitude, longitude], radius=our_radius*1000, color='transparent', fill=False, popup=f"Rayon du cercle: {our_radius} mètres").add_to(m)
 
         # request
         df_zone = req.request_zone(latitude, longitude, our_radius)
@@ -51,25 +79,33 @@ def create_map_risks(latitude, longitude, our_radius):
             df = req.merge_dataframes(df_readings, df_zone)
 
             for index, row in df.iterrows():
+                warning_message = warning(df, req.request_typical_range(row['stationReference'], risk=True))
+                popup_color = "red" if warning_message == "Warning!" else "green" if warning_message == "No warning." else "gray"
+
                 folium.Marker(
                     [row['lat'], row['long']],
-                    popup=warning(df, req.request_typical_range(row['stationReference'], risk=True), map=True)
+                    popup=folium.Popup(warning_message, parse_html=True),
+                    icon=folium.Icon(color=popup_color)
                 ).add_to(marker_cluster)
 
                 rows.append(req.request_typical_range(row['stationReference']))
+
+                # Append information to summary_df
+                new_row = {
+                    'pointNumber': count_points,
+                    'stationReference': row['stationReference'],
+                    'distance_to_point': distance_calculation(latitude, longitude, row['lat'], row['long']),
+                    'typical_range_high': req.request_typical_range(row['stationReference'])[0],
+                    'value_max': row['value'],
+                    'warning': warning_message
+                }
+
+                summary_df = pd.concat([summary_df, pd.DataFrame([new_row])], ignore_index=True)
         else:
-            st.warning("The required columns are not present in the DataFrame.")
+            st.warning("The required columns are not present in the dataframe.")
 
     folium_static(m)
-    return rows
-def warning(df, typical_range_high, map=False):
-    if typical_range_high != None:
-        if df['value'].max() > typical_range_high:
-            return("Warning! (" + str(typical_range_high) + ")") if map else ("Warning!")
-        else:
-            return("No warning. (" + str(typical_range_high) + ")") if map else ("No warning.")
-    else:
-        return("No data.")
+    return rows, summary_df
 
 st.write("""# Pi² Diot-Siaci""")
 date = st.date_input("Pick a date")
@@ -82,18 +118,17 @@ df_stations = req.request_all_station()
 # merge the two dataframes
 df = req.merge_dataframes(df_readings, df_stations)
 
-# We retrieve our typical ranges stored in a json file for every station
+# retrieve the typical ranges stored in a json file for every station
 try:
-    file_path='typical_range_high.json'
-    typical_ranges=pd.read_json(file_path,orient='index')
+    file_path  ='typical_range.json'
+    typical_ranges = pd.read_json(file_path,orient='index')
     typical_ranges.reset_index(inplace=True)
     typical_ranges.rename(columns={'index': 'Station'}, inplace=True)
 except Exception as e:
     print(e)
 
-
 # add the tabbed layout
-tabs = ["Dataframe", "Map","Current Warnings", "Select a station", "Find a station"]
+tabs = ["Dataframe", "Map", "Select a station", "Find a station", "Current warnings"]
 selected_tab = st.sidebar.radio("Navigation", tabs)
 
 if selected_tab == "Dataframe":
@@ -145,54 +180,60 @@ elif selected_tab == "Select a station":
 elif selected_tab=="Find a station":
     st.title("Select a zone on the map")
     points=[]
+
     # two input fields for latitude and longitude
     latitude = st.number_input("Latitude:", value=51.5)
     longitude = st.number_input("Longitude:", value=-0.12)
 
     # range slider for adjusting the radius of the circle
     our_radius = st.slider("Radius (kilometers):", min_value=1, max_value=20, value=5)
-    if st.button("Add Point"):
+    if st.button("Add point"):
         state.points.append([latitude, longitude, our_radius])
-
     
-    if(st.button("Clear Points")):
+    if(st.button("Clear point(s)")):
         state.points = []
 
     if state.points:
         st.write("List of Points:", state.points)
 
-
-
-# Load Map button
+    # load map button
     if st.button("Load map"):
         if state.points:
-            maliste = create_map_risks(state.points)
-            st.dataframe(pd.DataFrame({"stationReference": maliste}))
-            state.points = []
+            rows, summary_df = create_map_risks(state.points)
 
+            # display the summary dataframe
+            st.dataframe(summary_df)
+
+            state.points = []
         else:
             st.warning("Please add at least one point before loading the map.")
 
-elif selected_tab=="Current Warnings":
+elif selected_tab=="Current warnings":
     st.title("All the current warnings in England: ")
+
+    # some staistics about the typical ranges
+    st.write("Typical ranges statistics: ")
+
+    count, total_count, percentage = req.calculate_percentage()
+
+    st.write("Number of stations without typical range: ", count)
+    st.write("Total number of stations: ", total_count)
+    st.write("Percentage: ", percentage)
     
-    stations=df["stationReference"].unique()
+    stations = df["stationReference"].unique()
     
     warnings=[]
     for s in stations:
         try:
-            typicalRangeHigh=typical_ranges.loc[typical_ranges['Station'] == s, "typical_range_high"].iloc[0]
-            row=df[df['stationReference']==s]
+            typical_range_high = typical_ranges.loc[typical_ranges['Station'] == s, "typical_range_high"].iloc[0]
+            row = df[df['stationReference']==s]
 
-            if typicalRangeHigh!=None:
-                if row['value'].max()>typicalRangeHigh:
-                    warnings.append(s)
+            if typical_range_high != None:
+                if row['value'].max() > typical_range_high:
+                    warnings.append([s, typical_range_high, row['value'].max()])
                     
         except Exception as e:
             print(e)
         
-    
-    warnings_df=pd.DataFrame(warnings,columns=["Station Warning"])
+    warnings_df = pd.DataFrame(warnings, columns=["Station with warning", "Typical range high", "Current value"])
     st.dataframe(warnings_df)
-
-    

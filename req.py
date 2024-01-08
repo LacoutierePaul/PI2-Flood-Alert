@@ -160,13 +160,14 @@ def merge_dataframes(df_readings, df_stations):
 
     return df
 
-# This function allows us to store every typical range high and low in a json file
+# this function allows us to store every typical range high and low in a json file
 def store_typical_range(df):
     stations=df['stationReference'].unique()
 
     typical_range_dict={}
 
     print("Requesting the API")
+
     cpt=1
     for s in stations:
         try:
@@ -176,7 +177,24 @@ def store_typical_range(df):
         except Exception as e:
             print(e)
         cpt+=1
+
     print("Loading the json file...")
-    with open('typical_range_high.json','w') as file:
+
+    with open('typical_range.json','w') as file:
         json.dump(typical_range_dict, file, indent=4)
         print("Completed !")
+
+# function to calculate the number and percentage of staions without typical range
+def calculate_percentage():
+    file = open('typical_range.json')
+    data = json.load(file)
+    
+    count = 0
+    for key in data:
+        if data[key]['typical_range_high'] == None or data[key]['typical_range_low'] == None:
+            count += 1
+    
+    total_count = len(data)
+    percentage = (count / total_count) * 100
+
+    return count, total_count, percentage
