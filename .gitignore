@@ -1,1 +1,8 @@
+# ignore Python cache files
+__pycache__/
+
+# ignore all pycache directories
+**/__pycache__/
+
+# meeting files
 *.txt
