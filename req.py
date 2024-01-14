@@ -198,3 +198,33 @@ def calculate_percentage():
     percentage = (count / total_count) * 100
 
     return count, total_count, percentage
+
+
+def calculate_risk_percentage():
+    try:
+        with open('typical_range.json', 'r') as file:
+            data = json.load(file)
+    except FileNotFoundError:
+        print("Le fichier 'typical_range.json' n'a pas été trouvé.")
+        return None
+    risk_count = 0
+    for key in data:
+        if data[key]['typical_range_high'] is None or data[key]['typical_range_low'] is None:
+            risk_count += 1
+    total_stations = len(data)
+    risk_percentage = (risk_count / total_stations) * 100
+
+    return risk_count, total_stations, risk_percentage
+
+def identify_high_risk_stations(df_readings):
+    try:
+        with open('typical_range.json', 'r') as file:
+            typical_range_data = json.load(file)
+    except FileNotFoundError:
+        print("Le fichier 'typical_range.json' n'a pas été trouvé.")
+        return None
+    df_merged = pd.merge(df_readings, pd.DataFrame(typical_range_data).T,
+                         left_on='stationReference', right_index=True)
+    high_risk_stations = df_merged[df_merged['value'] > df_merged['typical_range_high']]
+
+    return high_risk_stations
