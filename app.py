@@ -4,6 +4,7 @@
 import req
 
 from math import radians, cos, sin, sqrt, atan2
+import time
 
 import pandas as pd
 
@@ -46,25 +47,24 @@ def warning(df, typical_range):
         if df['value'].max() > typical_range_high:
             return("Warning!")
         else:
-            return("No warning.")
+            return("No warning")
     else:
-        return("No data.")
+        return("No data")
 
 def create_map_risks(points):
-    m = folium.Map(location=[points[0][0], points[0][1]], zoom_start=6)
+    m = folium.Map(location=[points[0][2], points[0][3]], zoom_start=6)
 
-    # create a dataframe with the columns 'pointNumber', 'stationReference', 'distance_to_point', 'typical_range_high', 'value_max', 'warning'
-    summary_df = pd.DataFrame(columns=['pointNumber', 'stationReference', 'distance_to_point', 'typical_range_high', 'value_max', 'warning'])
+    # create a dataframe with the columns 'pointName', 'insuredValue', 'stationReference', 'pointDistance', 'exceedancePercentage', 'warning'
+    summary_df = pd.DataFrame(columns=['pointName', 'insuredValue', 'stationReference', 'pointDistance', 'exceedancePercentage', 'warning'])
 
     marker_cluster = MarkerCluster().add_to(m)
     rows = []
 
     for point in points:
-        count_points = 1
-        latitude, longitude, our_radius = point
+        name, insured_value, latitude, longitude, our_radius = point
 
         # add a marker for the selected point
-        folium.Marker([latitude, longitude], popup="Selected point").add_to(marker_cluster)
+        folium.Marker([latitude, longitude], popup=name).add_to(marker_cluster)
 
         # add a circle around the selected point 
         folium.Circle(location=[latitude, longitude], radius=our_radius*1000, color='transparent', fill=False, popup=f"Rayon du cercle: {our_radius} mètres").add_to(m)
@@ -90,13 +90,20 @@ def create_map_risks(points):
 
                 rows.append(req.request_typical_range(row['stationReference']))
 
-                # Append information to summary_df
+                # compute the percentage of exceedance between the value and the typical range
+                typical_range_high = req.request_typical_range(row['stationReference'])[0]
+                if typical_range_high != None:
+                    exceedance_percentage = round((row['value'] - typical_range_high) / typical_range_high * 100, 2)
+                else:
+                    exceedance_percentage = 'No data'
+
+                # append information to summary_df
                 new_row = {
-                    'pointNumber': count_points,
+                    'pointName': name,
+                    'insuredValue': insured_value,
                     'stationReference': row['stationReference'],
-                    'distance_to_point': distance_calculation(latitude, longitude, row['lat'], row['long']),
-                    'typical_range_high': req.request_typical_range(row['stationReference'])[0],
-                    'value_max': row['value'],
+                    'pointDistance': distance_calculation(latitude, longitude, row['lat'], row['long']),
+                    'exceedancePercentage': exceedance_percentage,
                     'warning': warning_message
                 }
 
@@ -182,15 +189,40 @@ elif selected_tab=="Find a station":
     points=[]
 
     # two input fields for latitude and longitude
+    name = st.text_input("Name of the point:", value="First point")
+    insured_value = st.number_input("Insured value:", value=1000000)
     latitude = st.number_input("Latitude:", value=51.5)
     longitude = st.number_input("Longitude:", value=-0.12)
 
     # range slider for adjusting the radius of the circle
     our_radius = st.slider("Radius (kilometers):", min_value=1, max_value=20, value=5)
     if st.button("Add point"):
-        state.points.append([latitude, longitude, our_radius])
+        # check that there is no point with the same name
+        if any(point[0] == name for point in state.points):
+            st.warning(f"The point '{name}' already exists.")
+        else:
+            state.points.append([name, insured_value, latitude, longitude, our_radius])
+
+    uploaded_file = st.file_uploader("Choose a file", type="csv")
+    if st.button("Add points from a csv file"):
+        if uploaded_file is not None:
+            try:
+                df_points = pd.read_csv(uploaded_file)
+                print(df_points)
+
+                st.write("List of points to add:")
+                st.dataframe(df_points)
+
+                for index, row in df_points.iterrows():
+                    # check that there is no point with the same name
+                    if any(point[0] == row['name'] for point in state.points):
+                        st.warning(f"The point '{row['name']}' already exists.")
+                    else:
+                        state.points.append([row['name'], row['insured_value'], row['latitude'], row['longitude'], row['radius']])
+            except Exception as e:
+                st.error(f"Error: {e}")
     
-    if(st.button("Clear point(s)")):
+    if st.button("Clear point(s)"):
         state.points = []
 
     if state.points:
@@ -201,8 +233,8 @@ elif selected_tab=="Find a station":
         if state.points:
             rows, summary_df = create_map_risks(state.points)
 
-            # display the summary dataframe
-            st.dataframe(summary_df)
+            # display the summary dataframe by warning first, then by insured value and finally by distance
+            st.dataframe(summary_df.sort_values(by=['warning', 'insuredValue', 'pointDistance']))
 
             state.points = []
         else:

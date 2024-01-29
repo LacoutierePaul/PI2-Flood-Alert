@@ -171,7 +171,6 @@ def store_typical_range(df):
     cpt=1
     for s in stations:
         try:
-            print((cpt/len(stations))*100,"%")
             typicalRH,typicalRL=request_typical_range(s,risk=True)
             typical_range_dict[s]={"typical_range_high":typicalRH,"typical_range_low":typicalRL}
         except Exception as e:
@@ -198,7 +197,6 @@ def calculate_percentage():
     percentage = (count / total_count) * 100
 
     return count, total_count, percentage
-
 
 def calculate_risk_percentage():
     try:
