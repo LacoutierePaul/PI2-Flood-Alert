@@ -231,10 +231,12 @@ elif selected_tab=="Find a station":
     # load map button
     if st.button("Load map"):
         if state.points:
+            print("Loading the map...")
             rows, summary_df = create_map_risks(state.points)
+            print("Completed !")
 
             # display the summary dataframe by warning first, then by insured value and finally by distance
-            st.dataframe(summary_df.sort_values(by=['warning', 'insuredValue', 'pointDistance']))
+            st.dataframe(summary_df.sort_values(by=['warning', 'pointDistance', 'insuredValue']))
 
             state.points = []
         else:
