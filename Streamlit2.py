@@ -93,6 +93,7 @@ except Exception as e:
 
 df = pd.DataFrame(data_readings['items'])
 df_stations = pd.DataFrame(data_stations['items'])
+print(df_stations)
 
 # on ne garde que les colonnes 'lat', 'long' et 'stationReference'
 df_stations = df_stations[['lat', 'long', 'stationReference']]
