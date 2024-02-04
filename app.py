@@ -2,14 +2,10 @@
 
 # imports
 import req
-
 from math import radians, cos, sin, sqrt, atan2
 import time
-
 import pandas as pd
-
 import streamlit as st
-
 import folium
 from folium.plugins import MarkerCluster
 from streamlit_folium import folium_static
@@ -226,7 +222,9 @@ elif selected_tab=="Find a station":
         state.points = []
 
     if state.points:
-        st.write("List of Points:", state.points)
+        st.write("List of Points:")
+        dataframe_point = pd.DataFrame(state.points, columns=["Name", "Insured value", "Latitude", "Longitude", "Radius"])
+        st.dataframe(dataframe_point)
 
     # load map button
     if st.button("Load map"):
