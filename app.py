@@ -3,7 +3,6 @@
 # imports
 import req
 from math import radians, cos, sin, sqrt, atan2
-import time
 import pandas as pd
 import streamlit as st
 import folium
