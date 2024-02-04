@@ -93,10 +93,9 @@ except Exception as e:
 
 df = pd.DataFrame(data_readings['items'])
 df_stations = pd.DataFrame(data_stations['items'])
-print(df_stations)
 
 # on ne garde que les colonnes 'lat', 'long' et 'stationReference'
-df_stations = df_stations[['lat', 'long', 'stationReference']]
+df_stations = df_stations[['lat', 'long', 'stationReference', 'riverName']]
 
 # ajout des colonnes 'parameter' et 'period' à partir de la colonne 'measure' (tout est dans l'URL) en utilisant regex
 df[['stationReference', 'parameter', 'qualifier', 'period', 'unitName']] = df['measure'].str.extract(r'measures/(.*)-(.*)-(.*)-.-(.*)-(.*)')
