@@ -52,7 +52,7 @@ def create_map_risks(points):
     # create a dataframe with the columns 'pointName', 'insuredValue', 'stationReference', 'pointDistance', 'exceedancePercentage', 'warning'
     summary_df = pd.DataFrame(columns=['pointName', 'insuredValue', 'stationReference', 'pointDistance', 'exceedancePercentage', 'warning'])
 
-    marker_cluster = MarkerCluster().add_to(m)
+    marker_cluster = MarkerCluster(disable_clustering_at_zoom=1).add_to(m)
     rows = []
 
     for point in points:
