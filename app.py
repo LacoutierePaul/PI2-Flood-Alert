@@ -20,7 +20,7 @@ st.write('You picked:', date)
 def request_data(chosen_date):
     # requests
     df_readings = req.request_all_readings(chosen_date)
-    df_stations = req.request_all_station()
+    df_stations = req.request_all_stations()
 
     # merge the two dataframes
     df = req.merge_dataframes(df_readings, df_stations)
@@ -65,7 +65,7 @@ def distance_calculation(lat1, lon1, lat2, lon2):
     return distance
 
 def warning(df, typical_range_high):
-    if typical_range_high != None and typical_range_high != np.nan:
+    if typical_range_high is not None and not np.isnan(typical_range_high):
         if df['value'].max() > typical_range_high:
             return("Warning!")
         else:
@@ -98,7 +98,7 @@ def create_map_risks(points):
         required_columns = ['lat', 'long', 'stationReference']
         if all(column in df_zone.columns for column in required_columns):
             # merge the two dataframes
-            df = req.merge_dataframes(df_readings, df_zone)
+            df = req.merge_dataframes(df_readings, df_zone, True)
 
             for index, row in df.iterrows():
                 station = row['stationReference']
@@ -115,7 +115,8 @@ def create_map_risks(points):
                 rows.append(typical_range_high)
 
                 # compute the percentage of exceedance between the value and the typical range high
-                if typical_range_high != None and typical_range_high != np.nan:
+                if typical_range_high is not None and not np.isnan(typical_range_high):
+                    print(typical_range_high == np.isnan, typical_range_high)
                     exceedance_percentage = round((row['value'] - typical_range_high) / typical_range_high * 100, 2)
                 else:
                     exceedance_percentage = 'No data'
@@ -147,10 +148,10 @@ if selected_tab == 'All the readings':
     st.write('The table below shows all the readings in Great Britain.')
     st.write('You can sort the table by clicking on the column headers.')
 
-    df['dateTime'] = pd.to_datetime(df['dateTime'])
-    df['dateTime'] = df['dateTime'].dt.date
+    df['date'] = pd.to_datetime(df['date'])
+    df['date'] = df['date'].dt.date
 
-    st.dataframe(df[df['dateTime'] == date])
+    st.dataframe(df[df['date'] == date])
 
 elif selected_tab == 'Map of all the stations':
     st.header('Map of all the stations in Great Britain')
@@ -268,13 +269,13 @@ elif selected_tab=='Current warnings':
     st.write('Total number of stations:', total_count)
     st.write('Percentage:', percentage)
     
-    warnings=[]
+    warnings = []
     for s in df_stations['stationReference']:
         try:
             typical_range_high = typical_ranges[typical_ranges['stationReference'] == s]['typical_range_high'].iloc[0]
             row = df[df['stationReference']==s]
 
-            if typical_range_high != None and typical_range_high != np.nan:
+            if typical_range_high is not None and not np.isnan(typical_range_high):
                 if row['value'].max() > typical_range_high:
                     warnings.append([s, typical_range_high, row['value'].max()])
         except Exception as e:

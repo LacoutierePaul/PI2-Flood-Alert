@@ -2,7 +2,8 @@ import requests
 import json
 import pandas as pd
 
-def request_all_station():
+# request all the stations
+def request_all_stations():
     url = "http://environment.data.gov.uk/flood-monitoring/id/stations"
 
     params = {
@@ -24,6 +25,7 @@ def request_all_station():
 
     return df
 
+# request a particular reading
 def request_reading(station):
     url = "http://environment.data.gov.uk/flood-monitoring/data/readings"
 
@@ -44,7 +46,7 @@ def request_reading(station):
     return df
 
 # now, we need to loop through all the stations and request the readings
-stations = request_all_station()
+stations = request_all_stations()
 
 # define the variable to store the typical ranges
 typical_ranges = {}
@@ -60,8 +62,8 @@ for station in stations:
         typical_range_low = readings['value'].quantile(0.05)
 
         # store the typical ranges
-        print(station, typical_range_low, typical_range_high)
-        typical_ranges[station] =  {'typical_range_high': typical_range_high, 'typical_range_low': typical_range_low}
+        print(station, typical_range_high, typical_range_low)
+        typical_ranges[station] = {'typical_range_high': typical_range_high, 'typical_range_low': typical_range_low}
     except:
         # store the typical ranges
         print(station, 'null', 'null')

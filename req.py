@@ -2,6 +2,7 @@ import requests
 import json
 import pandas as pd
 
+# clean the data from the stations
 def clean_data_stations(df):
     # delete all the rows with a missing value in the columns 'lat' and 'long'
     df.dropna(subset=['lat', 'long'], inplace=True)
@@ -14,6 +15,7 @@ def clean_data_stations(df):
 
     return df
 
+# clean the data from the readings
 def clean_data_readings(df):
     # add columns 'stationReference', 'parameter', 'qualifier', 'period' and 'unitName' from the column 'measure' (everything is in the URL) with regex
     df[['stationReference', 'parameter', 'qualifier', 'period', 'unitName']] = df['measure'].str.extract(r'measures/(.*)-(.*)-(.*)-.-(.*)-(.*)')
@@ -29,7 +31,7 @@ def clean_data_readings(df):
     return df
 
 # request all the stations
-def request_all_station():
+def request_all_stations():
     url = "http://environment.data.gov.uk/flood-monitoring/id/stations"
 
     params = {
@@ -43,8 +45,8 @@ def request_all_station():
 
     df = pd.DataFrame(data['items'])
 
-    # keep only the columns 'lat', 'long' and 'stationReference'
-    df = df[['lat', 'long', 'stationReference']]
+    # keep only the columns 'lat', 'long', 'stationReference' and 'riverName'
+    df = df[['lat', 'long', 'stationReference', 'riverName']]
 
     # clean the data
     df = clean_data_stations(df)
@@ -67,14 +69,15 @@ def request_station(station):
 
     df = pd.DataFrame(data['items'])
 
-    # keep only the columns 'lat', 'long' and 'stationReference'
-    df = df[['lat', 'long', 'stationReference']]
+    # keep only the columns 'lat', 'long', 'stationReference' and 'riverName'
+    df = df[['lat', 'long', 'stationReference', 'riverName']]
 
     # clean the data
     df = clean_data_stations(df)
 
     return df
 
+# request a particular zone
 def request_zone(latitude, longitude, radius):
     
     url = "http://environment.data.gov.uk/flood-monitoring/id/stations"
@@ -152,27 +155,39 @@ def request_typical_range(station):
     return (typical_range_high,typical_range_low)
     
 # merge two dataframes
-def merge_dataframes(df_readings, df_stations):
+def merge_dataframes(df_readings, df_stations, map=False):
     df = pd.merge(df_readings, df_stations, on='stationReference')
 
     # ensure that the lat and long columns are not null
     df.dropna(subset=['lat', 'long'], inplace=True)
 
+    print(df.head())
+
+    # drop the columns '@id', 'qualifier'
+    df = df.drop(['@id', 'dateTime'], axis=1)
+
+    if map:
+        # place the columns
+        df = df[['date', 'time', 'stationReference', 'lat', 'long', 'value', 'parameter', 'qualifier', 'period', 'unitName']]
+    else:
+        # place the columns
+        df = df[['date', 'time', 'stationReference', 'lat', 'long', 'riverName', 'value', 'parameter', 'qualifier', 'period', 'unitName']]
+
     # sort by 'dateTime' in descending order
-    df.sort_values(by=['dateTime'], ascending=False, inplace=True)
+    df.sort_values(by=['date', 'time'], ascending=False, inplace=True)
 
     return df
 
 # this function allows us to store every typical range high and low in a json file
 def store_typical_range(df):
-    stations=df['stationReference'].unique()
+    stations = df['stationReference'].unique()
 
-    typical_range_dict={}
+    typical_range_dict = {}
 
     for s in stations:
         try:
-            typicalRH,typicalRL=request_typical_range(s)
-            typical_range_dict[s]={"typical_range_high":typicalRH,"typical_range_low":typicalRL}
+            typicalRH, typicalRL = request_typical_range(s)
+            typical_range_dict[s] = {"typical_range_high": typicalRH, "typical_range_low": typicalRL}
         except Exception as e:
             print(e)
 
