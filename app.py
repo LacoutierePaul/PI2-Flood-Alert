@@ -3,11 +3,40 @@
 # imports
 import req
 from math import radians, cos, sin, sqrt, atan2
+import numpy as np
+from datetime import datetime
 import pandas as pd
 import streamlit as st
 import folium
 from folium.plugins import MarkerCluster
 from streamlit_folium import folium_static
+
+st.title('Pi² Diot-Siaci (team 213)')
+max_date = datetime.now().date()
+date = st.date_input('Pick a date', max_value=max_date)
+st.write('You picked:', date)
+
+@st.cache_data
+def request_data(chosen_date):
+    # requests
+    df_readings = req.request_all_readings(chosen_date)
+    df_stations = req.request_all_station()
+
+    # merge the two dataframes
+    df = req.merge_dataframes(df_readings, df_stations)
+
+    # retrieve the typical ranges stored in a json file for every station
+    try:
+        file_path = 'typical_range.json'
+        typical_ranges = pd.read_json(file_path, orient='index')
+        typical_ranges.reset_index(inplace=True)
+        typical_ranges.rename(columns={'index': 'stationReference'}, inplace=True)
+    except Exception as e:
+        print(e)
+
+    return df, df_readings, df_stations, typical_ranges
+
+df, df_readings, df_stations, typical_ranges = request_data(date)
 
 class SessionState:
     def __init__(self, **kwargs):
@@ -35,10 +64,8 @@ def distance_calculation(lat1, lon1, lat2, lon2):
 
     return distance
 
-def warning(df, typical_range):
-    typical_range_high, typical_range_low = typical_range
-    
-    if typical_range_high != None:
+def warning(df, typical_range_high):
+    if typical_range_high != None and typical_range_high != np.nan:
         if df['value'].max() > typical_range_high:
             return("Warning!")
         else:
@@ -74,7 +101,9 @@ def create_map_risks(points):
             df = req.merge_dataframes(df_readings, df_zone)
 
             for index, row in df.iterrows():
-                warning_message = warning(df, req.request_typical_range(row['stationReference'], risk=True))
+                station = row['stationReference']
+                typical_range_high = typical_ranges[typical_ranges['stationReference'] == station]['typical_range_high'].iloc[0]
+                warning_message = warning(df, typical_range_high)
                 popup_color = "red" if warning_message == "Warning!" else "green" if warning_message == "No warning." else "gray"
 
                 folium.Marker(
@@ -83,11 +112,10 @@ def create_map_risks(points):
                     icon=folium.Icon(color=popup_color)
                 ).add_to(marker_cluster)
 
-                rows.append(req.request_typical_range(row['stationReference']))
+                rows.append(typical_range_high)
 
-                # compute the percentage of exceedance between the value and the typical range
-                typical_range_high = req.request_typical_range(row['stationReference'])[0]
-                if typical_range_high != None:
+                # compute the percentage of exceedance between the value and the typical range high
+                if typical_range_high != None and typical_range_high != np.nan:
                     exceedance_percentage = round((row['value'] - typical_range_high) / typical_range_high * 100, 2)
                 else:
                     exceedance_percentage = 'No data'
@@ -109,56 +137,44 @@ def create_map_risks(points):
     folium_static(m)
     return rows, summary_df
 
-st.write("""# Pi² Diot-Siaci""")
-date = st.date_input("Pick a date")
-st.write("You picked: ", date)
-
-# requests
-df_readings = req.request_all_readings(date)
-df_stations = req.request_all_station()
-
-# merge the two dataframes
-df = req.merge_dataframes(df_readings, df_stations)
-
-# retrieve the typical ranges stored in a json file for every station
-try:
-    file_path  ='typical_range.json'
-    typical_ranges = pd.read_json(file_path,orient='index')
-    typical_ranges.reset_index(inplace=True)
-    typical_ranges.rename(columns={'index': 'Station'}, inplace=True)
-except Exception as e:
-    print(e)
-
 # add the tabbed layout
-tabs = ["Dataframe", "Map", "Select a station", "Find a station", "Current warnings"]
-selected_tab = st.sidebar.radio("Navigation", tabs)
+tabs = ['All the readings', 'Map of all the stations', 'Find a station', 'Make your own map', 'Current warnings']
+selected_tab = st.sidebar.radio('Navigation', tabs)
 
-if selected_tab == "Dataframe":
-    st.header("Dataframe")
+if selected_tab == 'All the readings':
+    st.header('All the readings in Great Britain')
 
-    st.write(date)
+    st.write('The table below shows all the readings in Great Britain.')
+    st.write('You can sort the table by clicking on the column headers.')
 
     df['dateTime'] = pd.to_datetime(df['dateTime'])
     df['dateTime'] = df['dateTime'].dt.date
 
     st.dataframe(df[df['dateTime'] == date])
 
-elif selected_tab == "Map":
-    st.header("Map")
+elif selected_tab == 'Map of all the stations':
+    st.header('Map of all the stations in Great Britain')
+
+    st.write('The map below shows all the stations in Great Britain.')
+    st.write('You can click on the markers to see the stationReference.')
+    st.write('Here is the number of stations:', len(df_stations))
 
     # create a map centered on the UK
     m = folium.Map(location=[51.5, -0.12], zoom_start=6)
 
     # add clusters of markers
     marker_cluster = MarkerCluster().add_to(m)
-    for index, row in df.iterrows():
+    for index, row in df_stations.iterrows():
         folium.Marker([row['lat'], row['long']], popup=row['stationReference']).add_to(marker_cluster)  
     
     # show the map
     folium_static(m)
 
-elif selected_tab == "Select a station":
-    st.header( "Sort on a particular station")
+elif selected_tab == 'Find a station':
+    st.header('Find a station in Great Britain')
+
+    st.write('The table below shows the readings for a particular station.')
+    st.write('You can sort the table by clicking on the column headers.')
 
     # ensure that the stationReference column is unique
     cities = df['stationReference'].unique()
@@ -167,46 +183,44 @@ elif selected_tab == "Select a station":
     choice = st.selectbox('Select a station', cities)
 
     # filter the dataframe
-    df_station = df[df['stationReference']==choice]
+    df_station = df[df['stationReference'] == choice]
     st.dataframe(df_station)
-    st.write("You picked: ", choice)
 
-    typical_range_high, typical_range_low = req.request_typical_range(choice)
+    st.write('Here is some other information about the station:')
 
-    st.write("Typical range high: ", typical_range_high)
-    st.write("Typical range low: ", typical_range_low)
+    typical_range = typical_ranges.loc[typical_ranges['stationReference'] == choice, ['typical_range_high', 'typical_range_low']].iloc[0]
 
-    # warning
-    st.write(warning(df_station, typical_range_high))
+    st.write('Typical range high:', typical_range[0])
+    st.write('Typical range low:', typical_range[1])
 
-elif selected_tab=="Find a station":
-    st.title("Select a zone on the map")
+    # display the warning
+    st.write(warning(df_station, typical_range[0]))
+
+elif selected_tab=='Make your own map':
+    st.header('Make your own map in Great Britain')
     points=[]
 
-    # two input fields for latitude and longitude
-    name = st.text_input("Name of the point:", value="First point")
-    insured_value = st.number_input("Insured value:", value=1000000)
-    latitude = st.number_input("Latitude:", value=51.5)
-    longitude = st.number_input("Longitude:", value=-0.12)
+    # input fields for the user (pre-filled with default values)
+    name = st.text_input('Name of the point:', value='First point')
+    insured_value = st.number_input('Insured value:', value=0)
+    latitude = st.number_input('Latitude:', value=51.5)
+    longitude = st.number_input('Longitude:', value=-0.12)
+    radius = st.slider('Radius (in kilometers):', min_value=1, max_value=20, value=5)
 
-    # range slider for adjusting the radius of the circle
-    our_radius = st.slider("Radius (kilometers):", min_value=1, max_value=20, value=5)
-    if st.button("Add point"):
+    # add point button
+    if st.button('Add point'):
         # check that there is no point with the same name
         if any(point[0] == name for point in state.points):
             st.warning(f"The point '{name}' already exists.")
         else:
-            state.points.append([name, insured_value, latitude, longitude, our_radius])
+            state.points.append([name, insured_value, latitude, longitude, radius])
 
-    uploaded_file = st.file_uploader("Choose a file", type="csv")
-    if st.button("Add points from a csv file"):
+    # add point(s) from a csv file button
+    uploaded_file = st.file_uploader('Choose a file', type='csv')
+    if st.button('Add point(s) from a csv file'):
         if uploaded_file is not None:
             try:
                 df_points = pd.read_csv(uploaded_file)
-                print(df_points)
-
-                st.write("List of points to add:")
-                st.dataframe(df_points)
 
                 for index, row in df_points.iterrows():
                     # check that there is no point with the same name
@@ -215,56 +229,56 @@ elif selected_tab=="Find a station":
                     else:
                         state.points.append([row['name'], row['insured_value'], row['latitude'], row['longitude'], row['radius']])
             except Exception as e:
-                st.error(f"Error: {e}")
+                st.error(f'Error: {e}')
     
-    if st.button("Clear point(s)"):
+    # clear point(s) button
+    if st.button('Clear point(s)'):
         state.points = []
 
+    # display your point(s)
     if state.points:
-        st.write("List of Points:")
-        dataframe_point = pd.DataFrame(state.points, columns=["Name", "Insured value", "Latitude", "Longitude", "Radius"])
-        st.dataframe(dataframe_point)
+        st.write('Your point(s):')
+        df_points = pd.DataFrame(state.points, columns=['Name', 'Insured value', 'Latitude', 'Longitude', 'Radius'])
+        st.dataframe(df_points)
 
     # load map button
-    if st.button("Load map"):
+    if st.button('Load map'):
         if state.points:
-            print("Loading the map...")
+            # create the map
             rows, summary_df = create_map_risks(state.points)
-            print("Completed !")
 
             # display the summary dataframe by warning first, then by insured value and finally by distance
             st.dataframe(summary_df.sort_values(by=['warning', 'pointDistance', 'insuredValue']))
 
+            # reset the points
             state.points = []
         else:
-            st.warning("Please add at least one point before loading the map.")
+            st.warning('Please add at least one point before loading the map.')
 
-elif selected_tab=="Current warnings":
-    st.title("All the current warnings in England: ")
+elif selected_tab=='Current warnings':
+    st.header('Current warnings in Great Britain')
 
-    # some staistics about the typical ranges
-    st.write("Typical ranges statistics: ")
+    st.write('The table below shows the current warnings in Great Britain.')
+    st.write('You can first see some statistics about the typical ranges and then the warnings for each station.')
 
+    # calculate the percentage of stations without typical range
     count, total_count, percentage = req.calculate_percentage()
 
-    st.write("Number of stations without typical range: ", count)
-    st.write("Total number of stations: ", total_count)
-    st.write("Percentage: ", percentage)
-    
-    stations = df["stationReference"].unique()
+    st.write('Number of stations without typical range:', count)
+    st.write('Total number of stations:', total_count)
+    st.write('Percentage:', percentage)
     
     warnings=[]
-    for s in stations:
+    for s in df_stations['stationReference']:
         try:
-            typical_range_high = typical_ranges.loc[typical_ranges['Station'] == s, "typical_range_high"].iloc[0]
+            typical_range_high = typical_ranges[typical_ranges['stationReference'] == s]['typical_range_high'].iloc[0]
             row = df[df['stationReference']==s]
 
-            if typical_range_high != None:
+            if typical_range_high != None and typical_range_high != np.nan:
                 if row['value'].max() > typical_range_high:
                     warnings.append([s, typical_range_high, row['value'].max()])
-                    
         except Exception as e:
             print(e)
         
-    warnings_df = pd.DataFrame(warnings, columns=["Station with warning", "Typical range high", "Current value"])
+    warnings_df = pd.DataFrame(warnings, columns=['Station(s) with warning', 'Typical range high', 'Current value'])
     st.dataframe(warnings_df)

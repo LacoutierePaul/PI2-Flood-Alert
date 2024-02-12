@@ -9,6 +9,9 @@ def clean_data_stations(df):
     # delete all the rows with a value in the columns 'lat' and 'long' in the form of a list
     df = df[~df['lat'].apply(lambda x: isinstance(x, list))]
 
+    # verify that all stations have a unique 'stationReference'
+    df = df.drop_duplicates(subset=['stationReference'])
+
     return df
 
 def clean_data_readings(df):
@@ -124,7 +127,7 @@ def request_all_readings(date):
     return df
 
 # request a 'typicalRange' value
-def request_typical_range(station, risk=False):
+def request_typical_range(station):
     url = "http://environment.data.gov.uk/flood-monitoring/id/stations/" + station + "/stageScale"
 
     params = {
@@ -166,22 +169,15 @@ def store_typical_range(df):
 
     typical_range_dict={}
 
-    print("Requesting the API")
-
-    cpt=1
     for s in stations:
         try:
-            typicalRH,typicalRL=request_typical_range(s,risk=True)
+            typicalRH,typicalRL=request_typical_range(s)
             typical_range_dict[s]={"typical_range_high":typicalRH,"typical_range_low":typicalRL}
         except Exception as e:
             print(e)
-        cpt+=1
-
-    print("Loading the json file...")
 
     with open('typical_range.json','w') as file:
         json.dump(typical_range_dict, file, indent=4)
-        print("Completed !")
 
 # function to calculate the number and percentage of staions without typical range
 def calculate_percentage():
