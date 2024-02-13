@@ -19,11 +19,9 @@ def clean_data_stations(df):
 def clean_data_readings(df):
     # add columns 'stationReference', 'parameter', 'qualifier', 'period' and 'unitName' from the column 'measure' (everything is in the URL) with regex
     df[['stationReference', 'parameter', 'qualifier', 'period', 'unitName']] = df['measure'].str.extract(r'measures/(.*)-(.*)-(.*)-.-(.*)-(.*)')
+    
     # drop the column 'measure'
     df = df.drop('measure', axis=1)
-
-    # on supprime toutes les lignes avec comme paramètre autre que 'level'
-    df = df[df['parameter'] == 'level']
 
     # split the column 'dateTime' into two columns 'date' and 'time'
     df[['date', 'time']] = df['dateTime'].str.split('T', expand=True)
@@ -110,7 +108,31 @@ def request_all_readings(date):
 
     params = {
         'date': date,
+        'parameter': 'level',
         '_limit': 10000
+    }
+
+    try:
+        api_request = requests.get(url, params=params)
+        data = json.loads(api_request.content)
+    except:
+        data = None
+
+    df = pd.DataFrame(data['items'])
+
+    # clean the data
+    df = clean_data_readings(df)
+
+    return df
+
+# request the latest readings
+def request_latest_readings():
+    url = 'http://environment.data.gov.uk/flood-monitoring/data/readings'
+
+    params = {
+        'parameter': 'level',
+        '_limit': 10000,
+        'latest': 'true'
     }
 
     try:
@@ -155,8 +177,6 @@ def merge_dataframes(df_readings, df_stations, map=False):
     # ensure that the lat and long columns are not null
     df.dropna(subset=['lat', 'long'], inplace=True)
 
-    print(df.head())
-
     # drop the columns '@id', 'qualifier'
     df = df.drop(['@id', 'dateTime'], axis=1)
 
@@ -191,7 +211,7 @@ def store_typical_range(df):
 # function to calculate the number and percentage of staions without typical range
 def calculate_percentage():
     try:
-        with open('typical_range.json', 'r') as file:
+        with open('typical_ranges.json', 'r') as file:
             data = json.load(file)
     except FileNotFoundError:
         print('File not found.')
