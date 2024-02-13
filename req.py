@@ -19,7 +19,7 @@ def clean_data_stations(df):
 def clean_data_readings(df):
     # add columns 'stationReference', 'parameter', 'qualifier', 'period' and 'unitName' from the column 'measure' (everything is in the URL) with regex
     df[['stationReference', 'parameter', 'qualifier', 'period', 'unitName']] = df['measure'].str.extract(r'measures/(.*)-(.*)-(.*)-.-(.*)-(.*)')
-    
+
     # drop the column 'measure'
     df = df.drop('measure', axis=1)
 
@@ -109,6 +109,7 @@ def request_all_readings(date):
     params = {
         'date': date,
         'parameter': 'level',
+        'qualifier': 'Stage',
         '_limit': 10000
     }
 
@@ -131,6 +132,7 @@ def request_latest_readings():
 
     params = {
         'parameter': 'level',
+        'qualifier': 'Stage',
         '_limit': 10000,
         'latest': 'true'
     }

@@ -28,6 +28,7 @@ def request_reading(station):
 
     params = {
         'parameter': 'level',
+        'qualifier': 'Stage',
         'stationReference': station,
         '_limit': 10000
     }
