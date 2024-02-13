@@ -4,16 +4,13 @@ import pandas as pd
 
 # request all the stations
 def request_all_stations():
-    url = "http://environment.data.gov.uk/flood-monitoring/id/stations"
-
-    params = {
-    }
+    url = 'http://environment.data.gov.uk/flood-monitoring/id/stations'
 
     try:
-        api_request = requests.get(url, params=params)
+        api_request = requests.get(url)
         data = json.loads(api_request.content)
     except Exception as e:
-        data = "Error..."
+        data = None
 
     df = pd.DataFrame(data['items'])
 
@@ -27,11 +24,12 @@ def request_all_stations():
 
 # request a particular reading
 def request_reading(station):
-    url = "http://environment.data.gov.uk/flood-monitoring/data/readings"
+    url = 'http://environment.data.gov.uk/flood-monitoring/data/readings'
 
     params = {
-        "parameter": "level",
-        "stationReference": station
+        'parameter': 'level',
+        'stationReference': station,
+        '_limit': 10000
     }
 
     try:
@@ -39,7 +37,7 @@ def request_reading(station):
         print(api_request.url)
         data = json.loads(api_request.content)
     except Exception as e:
-        data = "Error..."
+        data = None
 
     df = pd.DataFrame(data['items'])
 
@@ -53,6 +51,7 @@ typical_ranges = {}
 
 for station in stations:
     readings = request_reading(station)
+    print('Nb of readings:', readings.shape[0])
 
     try:
         # calculate the typical range high (the measurement exceeded this for 5% of the relevant data)

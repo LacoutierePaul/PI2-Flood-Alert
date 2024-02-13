@@ -32,16 +32,13 @@ def clean_data_readings(df):
 
 # request all the stations
 def request_all_stations():
-    url = "http://environment.data.gov.uk/flood-monitoring/id/stations"
-
-    params = {
-    }
+    url = 'http://environment.data.gov.uk/flood-monitoring/id/stations'
 
     try:
-        api_request = requests.get(url, params=params)
+        api_request = requests.get(url)
         data = json.loads(api_request.content)
-    except Exception as e:
-        data = "Error..."
+    except:
+        data = None
 
     df = pd.DataFrame(data['items'])
 
@@ -55,17 +52,17 @@ def request_all_stations():
 
 # request a particular station
 def request_station(station):
-    url = "http://environment.data.gov.uk/flood-monitoring/id/stations"
+    url = 'http://environment.data.gov.uk/flood-monitoring/id/stations'
 
     params = {
-        "stationReference": station
+        'stationReference': station
     }
 
     try:
         api_request = requests.get(url, params=params)
         data = json.loads(api_request.content)
-    except Exception as e:
-        data = "Error..."
+    except:
+        data = None
 
     df = pd.DataFrame(data['items'])
 
@@ -80,7 +77,7 @@ def request_station(station):
 # request a particular zone
 def request_zone(latitude, longitude, radius):
     
-    url = "http://environment.data.gov.uk/flood-monitoring/id/stations"
+    url = 'http://environment.data.gov.uk/flood-monitoring/id/stations'
     
     params = {
         'lat': latitude,
@@ -91,8 +88,8 @@ def request_zone(latitude, longitude, radius):
     try:
         api_request = requests.get(url, params=params)
         data = json.loads(api_request.content)
-    except Exception as e:
-        data = "Error..."
+    except:
+        data = None
     
     df = pd.DataFrame(data['items'])
 
@@ -107,20 +104,20 @@ def request_zone(latitude, longitude, radius):
 # request all the readings
 def request_all_readings(date):
     # format the date for the API parameters
-    date = date.strftime("%Y-%m-%d")
+    date = date.strftime('%Y-%m-%d')
 
-    url = "http://environment.data.gov.uk/flood-monitoring/data/readings"
+    url = 'http://environment.data.gov.uk/flood-monitoring/data/readings'
 
     params = {
-        "date": date,
-        "_limit": "10000",
+        'date': date,
+        '_limit': 10000
     }
 
     try:
         api_request = requests.get(url, params=params)
         data = json.loads(api_request.content)
-    except Exception as e:
-        data = "Error..."
+    except:
+        data = None
 
     df = pd.DataFrame(data['items'])
 
@@ -131,25 +128,22 @@ def request_all_readings(date):
 
 # request a 'typicalRange' value
 def request_typical_range(station):
-    url = "http://environment.data.gov.uk/flood-monitoring/id/stations/" + station + "/stageScale"
-
-    params = {
-    }
+    url = 'http://environment.data.gov.uk/flood-monitoring/id/stations/' + station + '/stageScale'
 
     try:
-        api_request = requests.get(url, params=params)
+        api_request = requests.get(url)
         data = json.loads(api_request.content)
-    except Exception as e:
-        data = "Error..."
+    except:
+        data = None
 
     # search the 'typicalRangeHigh' and 'typicalRangeLow' values
     try:
-        typical_range_high = data["items"]["typicalRangeHigh"]
-    except Exception as e:
+        typical_range_high = data['items']['typicalRangeHigh']
+    except:
         typical_range_high = None
     try:
-        typical_range_low = data["items"]["typicalRangeLow"]
-    except Exception as e:
+        typical_range_low = data['items']['typicalRangeLow']
+    except:
         typical_range_low = None
        
     return (typical_range_high,typical_range_low)
@@ -182,22 +176,26 @@ def merge_dataframes(df_readings, df_stations, map=False):
 def store_typical_range(df):
     stations = df['stationReference'].unique()
 
-    typical_range_dict = {}
+    typical_ranges = {}
 
-    for s in stations:
+    for station in stations:
         try:
-            typicalRH, typicalRL = request_typical_range(s)
-            typical_range_dict[s] = {"typical_range_high": typicalRH, "typical_range_low": typicalRL}
-        except Exception as e:
-            print(e)
+            typical_range_high, typical_range_low = request_typical_range(station)
+            typical_ranges[station] = {'typical_range_high': typical_range_high, 'typical_range_low': typical_range_low}
+        except:
+            typical_ranges[station] = {'typical_range_high': None, 'typical_range_low': None}
 
-    with open('typical_range.json','w') as file:
-        json.dump(typical_range_dict, file, indent=4)
+    with open('typical_range.json', 'w') as file:
+        json.dump(typical_ranges, file, indent=4)
 
 # function to calculate the number and percentage of staions without typical range
 def calculate_percentage():
-    file = open('typical_range.json')
-    data = json.load(file)
+    try:
+        with open('typical_range.json', 'r') as file:
+            data = json.load(file)
+    except FileNotFoundError:
+        print('File not found.')
+        return None
     
     count = 0
     for key in data:
@@ -208,32 +206,3 @@ def calculate_percentage():
     percentage = (count / total_count) * 100
 
     return count, total_count, percentage
-
-def calculate_risk_percentage():
-    try:
-        with open('typical_range.json', 'r') as file:
-            data = json.load(file)
-    except FileNotFoundError:
-        print("Le fichier 'typical_range.json' n'a pas été trouvé.")
-        return None
-    risk_count = 0
-    for key in data:
-        if data[key]['typical_range_high'] is None or data[key]['typical_range_low'] is None:
-            risk_count += 1
-    total_stations = len(data)
-    risk_percentage = (risk_count / total_stations) * 100
-
-    return risk_count, total_stations, risk_percentage
-
-def identify_high_risk_stations(df_readings):
-    try:
-        with open('typical_range.json', 'r') as file:
-            typical_range_data = json.load(file)
-    except FileNotFoundError:
-        print("Le fichier 'typical_range.json' n'a pas été trouvé.")
-        return None
-    df_merged = pd.merge(df_readings, pd.DataFrame(typical_range_data).T,
-                         left_on='stationReference', right_index=True)
-    high_risk_stations = df_merged[df_merged['value'] > df_merged['typical_range_high']]
-
-    return high_risk_stations
