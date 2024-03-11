@@ -198,8 +198,12 @@ elif selected_tab == 'Find a station':
     st.write('Typical range high:', typical_range[0])
     st.write('Typical range low:', typical_range[1])
 
+    exceedance_percentage = None
+    if typical_range[0] is not None and not np.isnan(typical_range[0]):
+        exceedance_percentage = round((df_station['value'].max() - typical_range[0]) / typical_range[0] * 100, 2)
+
     # display the warning
-    st.write(warning(df_station, typical_range[0]))
+    st.write(warning(exceedance_percentage))
 
 elif selected_tab=='Make your own map':
     st.header('Make your own map in Great Britain')
