@@ -16,10 +16,10 @@ def send_email():
     message = MIMEMultipart()
     message['From'] = sender_email
     message['To'] = receiver_email
-    message['Subject'] = "Subject of the Email"
+    message['Subject'] = "Important : Flood Warning !"
 
     # Email body
-    body = "This is the body of the email."
+    body = "Hello, this is an automated email from the Flood Warning System. sWe have detected a potential flood in your area. Please take necessary precautions."
 
     # Attach body to the email
     message.attach(MIMEText(body, 'plain'))
