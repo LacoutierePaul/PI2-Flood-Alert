@@ -143,10 +143,37 @@ def create_map_risks(points):
     return rows, summary_df
 
 # add the tabbed layout
-tabs = ['All the readings', 'Map of all the stations', 'Find a station', 'Make your own map', 'Current warnings']
+tabs = ['Home','All the readings', 'Map of all the stations', 'Find a station', 'Make your own map', 'Current warnings']
 selected_tab = st.sidebar.radio('Navigation', tabs)
 
-if selected_tab == 'All the readings':
+if selected_tab == 'Home': 
+    st.header("Home")
+    st.write ("Bienvenue sur le site web de notre projet d'alerting innondation.")
+    st.write("Ce projet utilise les données du gouvernement britannique qui sont disponnible sur ce lien : ")
+    st.image("https://upload.wikimedia.org/wikipedia/fr/thumb/4/4b/HM_Government_logo.svg/1200px-HM_Government_logo.svg.png", use_column_width=True, width=20)
+
+    st.markdown("#### Page All the readings : ")
+    st.write("Cette page affiche un tableau contenant toutes les lectures de mesure en Grande-Bretagne. Il est possible de trier le tableau en cliquant sur les en-têtes de colonne.")
+
+    st.text("")
+
+    st.markdown("#### Page Map of all the stations : ")
+    st.write("Cette page affiche une carte avec tous les stations de mesure en Grande-Bretagne. Il est possible de cliquer sur les marqueurs pour voir la référence de la station.")
+
+    st.text("")
+
+    st.markdown("#### Page Find a station :")
+    st.write('Sur cette page, vous pouvez sélectionner une zone sur la carte en spécifiant la latitude, la longitude et le rayon du cercle. Lorsque vous appuyez sur le bouton "Load Map", la carte affiche les stations de mesure qui se trouvent dans la zone spécifiée. Les données correspondantes à cette station sont aussi disponnibles.')
+
+    st.markdown("#### Page Make your own map : ")
+    st.write("Cette page permet de créer une carte personnalisée en Grande-Bretagne. Il est possible d'ajouter des points en spécifiant un nom, une valeur assurée, une latitude, une longitude et un rayon. Les points peuvent également être ajoutés à partir d'un fichier CSV. Une fois que les points sont ajoutés, la carte peut être chargée, ce qui affiche un résumé des risques pour chaque point.")
+
+    st.markdown("#### Page Current warnings : ")
+    st.write("Cette page affiche les avertissements actuels en Grande-Bretagne. Elle affiche d'abord des statistiques sur les plages typiques, puis les avertissements pour chaque station.")
+
+
+
+elif selected_tab == 'All the readings':
     st.header('All the readings in Great Britain')
 
     st.write('The table below shows all the readings in Great Britain.')
