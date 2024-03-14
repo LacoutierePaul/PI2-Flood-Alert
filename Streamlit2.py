@@ -6,7 +6,7 @@ import json
 import pandas as pd
 import folium
 from folium.plugins import MarkerCluster
-from streamlit_folium import folium_static
+#from streamlit_folium import folium_static
 from folium import Circle
 from folium import plugins
 
@@ -132,10 +132,34 @@ for index, row in df.iterrows():
     folium.Marker([row['lat'], row['long']], popup=row['stationReference']).add_to(marker_cluster)
 
 # ajout des onglets
-tabs = ["DataFrame", "Map", "Select by station","Find a station","Stations sans typical_range_high"]
+tabs = ["Home","DataFrame", "Map", "Select by station","Find a station"]
 selected_tab = st.sidebar.radio("Navigation", tabs)
 
-if selected_tab == "DataFrame":
+if selected_tab == "Home": 
+    st.header("Home")
+    st.write ("Bienvenue sur le site web de notre projet d'alerting innondation.")
+    st.write("Ce projet utilise les données du gouvernement britannique qui sont disponnible sur ce lien : ")
+    st.image("https://upload.wikimedia.org/wikipedia/fr/thumb/4/4b/HM_Government_logo.svg/1200px-HM_Government_logo.svg.png", use_column_width=True, width=20)
+
+    st.markdown("#### Page DataFrame : ")
+    st.write("Cette page permet d'obtenir le DataFrame que nous récupérons par le gouvernement. Il suffit de choisir la date.")
+
+    st.text("")
+
+    st.markdown("#### Page Map : ")
+    st.write("Cette page affiche une carte interactive basée sur les données de votre DataFrame. La carte est centrée sur le Royaume-Uni et affiche des marqueurs pour chaque station de mesure. Vous pouvez cliquer sur les marqueurs pour afficher des informations supplémentaires sur chaque station.")
+
+    st.text("")
+
+    st.markdown("#### Page Select by station :")
+    st.write(" Cette page vous permet de filtrer les données en fonction d'une station de mesure spécifique. Vous pouvez sélectionner une station dans une liste déroulante et afficher les données correspondantes dans le DataFrame.")
+
+    st.text("")
+
+    st.markdown("#### Page Find a station :")
+    st.write('Sur cette page, vous pouvez sélectionner une zone sur la carte en spécifiant la latitude, la longitude et le rayon du cercle. Lorsque vous appuyez sur le bouton "Load Map", la carte affiche les stations de mesure qui se trouvent dans la zone spécifiée. Les données correspondantes à cette station sont aussi disponnibles.')
+
+elif selected_tab == "DataFrame":
     # afficher le DataFrame dans le premier onglet
     st.header("DataFrame")
     st.write(date)
@@ -183,26 +207,3 @@ elif selected_tab=="Find a station":
         maliste= create_map(latitude, longitude, our_radius)
         st.dataframe(df[df['stationReference'].isin(maliste)])
 
-elif selected_tab == "Stations sans typical_range_high":
-    st.title("Stations sans typical_range_high")
-
-    stations_without_typical_range_high = []
-
-    for station in df['stationReference'].unique():
-        url = f"{url_stations}/{station}"
-        st.write(url)
-        response = requests.get(url)
-        data = response.json()
-
-        try:
-            typical_range_high = data["items"]["stageScale"]["typicalRangeHigh"]
-        except KeyError:
-            # Si la clé 'typicalRangeHigh' n'existe pas, la station n'a pas cette valeur
-            stations_without_typical_range_high.append(station)
-
-    st.write("Stations sans typical_range_high:")
-    if stations_without_typical_range_high:
-        for station in stations_without_typical_range_high:
-            st.write(station)
-    else:
-        st.write("Toutes les stations ont une valeur pour typical_range_high")
