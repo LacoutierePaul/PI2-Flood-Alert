@@ -148,29 +148,28 @@ selected_tab = st.sidebar.radio('Navigation', tabs)
 
 if selected_tab == 'Home': 
     st.header("Home")
-    st.write ("Bienvenue sur le site web de notre projet d'alerting innondation.")
-    st.write("Ce projet utilise les données du gouvernement britannique qui sont disponnible sur ce lien : ")
+    st.write("Welcome to the website of our flood alerting project.")
+    st.write("This project utilizes data from the UK government available at this link: https://environment.data.gov.uk/flood-monitoring/doc/reference")
     st.image("https://upload.wikimedia.org/wikipedia/fr/thumb/4/4b/HM_Government_logo.svg/1200px-HM_Government_logo.svg.png", use_column_width=True, width=20)
 
-    st.markdown("#### Page All the readings : ")
-    st.write("Cette page affiche un tableau contenant toutes les lectures de mesure en Grande-Bretagne. Il est possible de trier le tableau en cliquant sur les en-têtes de colonne.")
+    st.markdown("#### All the Readings Page:")
+    st.write("This page displays a table containing all measurement readings in Great Britain. You can sort the table by clicking on the column headers.")
 
     st.text("")
 
-    st.markdown("#### Page Map of all the stations : ")
-    st.write("Cette page affiche une carte avec tous les stations de mesure en Grande-Bretagne. Il est possible de cliquer sur les marqueurs pour voir la référence de la station.")
+    st.markdown("#### Map of All the Stations Page:")
+    st.write("This page displays a map with all measurement stations in Great Britain. You can click on the markers to view the station reference.")
 
     st.text("")
 
-    st.markdown("#### Page Find a station :")
-    st.write('Sur cette page, vous pouvez sélectionner une zone sur la carte en spécifiant la latitude, la longitude et le rayon du cercle. Lorsque vous appuyez sur le bouton "Load Map", la carte affiche les stations de mesure qui se trouvent dans la zone spécifiée. Les données correspondantes à cette station sont aussi disponnibles.')
+    st.markdown("#### Find a Station Page:")
+    st.write('On this page, you can select an area on the map by specifying the latitude, longitude, and radius of the circle. When you press the "Load Map" button, the map displays the measurement stations located in the specified area. The corresponding data for each station is also available.')
 
-    st.markdown("#### Page Make your own map : ")
-    st.write("Cette page permet de créer une carte personnalisée en Grande-Bretagne. Il est possible d'ajouter des points en spécifiant un nom, une valeur assurée, une latitude, une longitude et un rayon. Les points peuvent également être ajoutés à partir d'un fichier CSV. Une fois que les points sont ajoutés, la carte peut être chargée, ce qui affiche un résumé des risques pour chaque point.")
+    st.markdown("#### Make Your Own Map Page:")
+    st.write("This page allows you to create a customized map in Great Britain. You can add points by specifying a name, an assured value, a latitude, a longitude, and a radius. Points can also be added from a CSV file. Once the points are added, the map can be loaded, which displays a summary of risks for each point.")
 
-    st.markdown("#### Page Current warnings : ")
-    st.write("Cette page affiche les avertissements actuels en Grande-Bretagne. Elle affiche d'abord des statistiques sur les plages typiques, puis les avertissements pour chaque station.")
-
+    st.markdown("#### Current Warnings Page:")
+    st.write("This page displays current warnings in Great Britain. It first displays statistics on typical ranges, then the warnings for each station.")
 
 
 elif selected_tab == 'All the readings':
