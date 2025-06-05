@@ -45,4 +45,9 @@ It provides interactive data visualizations and notifications related to flood r
 - **pandas** – Data analysis and manipulation.
 - **Matplotlib / Seaborn** – Data visualization.
 
+## Contacts / Authors
+- Paul LACOUTIERE  
+- Hector MELL MARIOLLE  
+- Loévan Le Quernec
+- Margaux Brack
 
