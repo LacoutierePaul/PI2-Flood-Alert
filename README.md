@@ -25,6 +25,8 @@
 
 It provides interactive data visualizations and notifications related to flood risks based on historical data, weather APIs, and geographical information.
 
+Link of the app : https://eq-213-floodwarning.streamlit.app/
+
 ---
 
 ## 🎯 Objectives
@@ -44,6 +46,11 @@ It provides interactive data visualizations and notifications related to flood r
 - **GeoPandas** – Geospatial data handling.
 - **pandas** – Data analysis and manipulation.
 - **Matplotlib / Seaborn** – Data visualization.
+
+## Screenshot of the app
+
+### Map of all Stations
+![map](https://github.com/user-attachments/assets/1f77f26c-7b34-4183-9d72-878c29cbc0bf)
 
 ## Contacts / Authors
 - Paul LACOUTIERE  
